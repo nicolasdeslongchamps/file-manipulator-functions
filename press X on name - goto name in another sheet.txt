@@ -1,0 +1,79 @@
+Dim vOldVal 'Must be at top of module
+Private Sub Worksheet_SelectionChange(ByVal Target As Range)
+'Cette macro sert à garder en mémoire la valeur de la cellule qui vient d'être modifiée.
+'https://www.mrexcel.com/forum/excel-questions/504402-excel-2003-vba-remember-old-cell-value-before-change.html
+    vOldVal = Target
+End Sub
+
+
+
+Private Sub Worksheet_Change(ByVal Target As Range)
+    Dim xlRange As Range
+    Dim xlCell As Range
+    Dim xlSheet As Worksheet
+    Dim valueToFind As String
+    Dim rngX As Range
+    Dim KeyCells As Range 'zone sensible à l'activation du macro
+
+    
+    
+' The variable KeyCells contains the cells that will
+' cause an alert when they are changed.
+    Set KeyCells = Range("A1:A5000")
+    Set xlSheet = ThisWorkbook.Worksheets("DATA") 'Sheet DATA
+    Set xlRange = xlSheet.Range("O1:O5000") 'zone contenant les num identification
+    
+    
+    
+    
+    
+    
+    
+    If Not Intersect(Target, Range("Alliage_number_macro")) Is Nothing _
+    And Target.Cells.Count = 1 Then
+'MACRO #1
+'Ceci "reset" le menu déroulant lorsqu'on change d'alliage #. Sinon,
+'l'alliage selection resterait là avec une fausse valeur lorsqu'on enlève
+'l'alliage #.
+'Écrit par Nicolas Deslongchamps, 8 mars 2018
+    
+    Cells(Target.Row, (Target.Column + 1)).Value = ""
+End If
+
+
+
+
+
+
+If Not Application.Intersect(KeyCells, Range(Target.Address)) _
+Is Nothing Then
+'MACRO #2
+'Cette macro sert à changer de feuille en un seul clic. En écrivant un "x" à la
+'cellule indiquée, cette macro identifiera le numéro d'équipement associé à la ligne
+'du "x" et nous emmènera au même équipement dans l'autre feuille.
+'AJOUT: On peut maintenant écrire un X dans la case Équipement.
+'Écrit par Nicolas Deslongchamps, 8 mars 2018
+
+
+
+
+
+
+If Target.Cells.Count = 1 Then
+    If Target.Value = "x" Then
+        Target.Value = vOldVal
+        valueToFind = vOldVal
+        
+        Set rngX = xlRange.Find(valueToFind, lookat:=xlPart)
+        If Not rngX Is Nothing Then
+            xlSheet.Activate
+            rngX.Select
+        End If
+        
+    End If
+End If
+End If
+
+
+End Sub
+

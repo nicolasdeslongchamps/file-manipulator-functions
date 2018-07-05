@@ -1,0 +1,223 @@
+'Macro press a key do something
+'Will go to another sheet.cell when press X
+
+
+Private Sub Worksheet_Change(ByVal Target As Range)
+'https://support.microsoft.com/en-us/help/213612/how-to-run-a-macro-when-certain-cells-change-in-excel
+'Introduction: Je trouvais ça long de toujours devoir copier coller le nom de la
+'macro à effectuer sur les ESDS "Write template, READNEW, EDITNEW" dans les cellules
+'A16:A3000.
+'Solution: À la place, je voulais écrire le numéro de la ligne correspondant à la
+'macro directement dans les cellules A16:A5000.
+'Explication de la macro: Cette macro détecte un changement des valeurs dans les
+'cellules A16:A3000. Si ce nombre correspond à un chiffre entre 3 et 13, le nom
+'de la macro correspondant au numéro de la ligne se copiera dans la cellule
+'où le numéro a été entré.
+'NOTE: aux prochains utilisateurs, les numéros de codes ont été conçu pour être
+'entrés avec le "numpad" du clavier.
+
+'Créé par Nicolas Deslongchamps, 5 mars 2018
+
+'Update 8 mars 2018 : Si on écrit un "x" dans la zône A16:A5000, la macro nous
+'emmènera directement à l'onglet CALCUL MAT_ND pour remplir les données de
+'températures. Le "x" sera ensuite remplacé par la valeur qui y était avant.
+
+'Update 9 mars 2018 : ajout des fonctions suivantes:
+'"23" open files in background - au lieu de cliquer sur le bouton Open
+'"45" Run program ---- écrire cette valeur dans une case de $SKIP. ça évite de
+'                       devoir cliquer sur le bouton avec la souris...
+
+    Dim KeyCells As Range
+    ' The variable KeyCells contains the cells that will
+    ' cause an alert when they are changed.
+    Dim xlSheet As Worksheet
+    Dim xlHomeSheet As Worksheet
+    Dim xlRange As Range
+    Dim valueToFind As String
+    Dim rngX As Range
+    Dim rInitialTargetRange As Variant
+    Dim bOpenAndPrompt As Boolean
+    
+    
+    Set KeyCells = Range("A16:A5000")
+    Set xlSheet = ThisWorkbook.Worksheets("Calcul_MAT_ND") 'Sheet Calcul MAT_ND
+    Set xlRange = xlSheet.Range("A1:A5000") 'zone contenant les num identification
+    Set xlHomeSheet = ThisWorkbook.ActiveSheet
+
+    
+    If Not Application.Intersect(KeyCells, Range(Target.Address)) _
+    Is Nothing Then
+    
+    
+    If Target.Cells.Count = 1 Then
+    'Replace text by one in the menu
+        Select Case Target.Value
+        Case 3 To 13 '(Target.Value <= 13 And Target.Value >= 3)
+            Target.Value = Range("A" & Target.Value).Value
+            
+        Case "x"
+        'Switch worksheet to corresponding cell
+            valueToFind = Cells(Target.Row, 15) ' Cellule contenant le
+            'nom d'identification.
+            '!!!!!!!!!!!!!!HARDCODED!!!!!!!!!!!!!!!
+            
+            Target.Value = "$SKIP" ' Note 1, voir à la fin pour une explication
+            Set rngX = xlRange.Find(valueToFind, lookat:=xlPart)
+            
+            If Not rngX Is Nothing Then
+                xlSheet.Activate
+                rngX.Select
+            End If
+            
+            
+        Case 123
+            'Open_files_in_background
+            bOpenAndPrompt = False
+            Call Open_files_and_prompt(Target, xlHomeSheet, bOpenAndPrompt)
+      
+            
+            
+        Case 23
+            'Open_file_and_make_it_appear
+            bOpenAndPrompt = True
+            Call Open_files_and_prompt(Target, xlHomeSheet, bOpenAndPrompt)
+
+
+            
+            
+        Case 45
+            'Run_program_from_a_menu
+            Target.Value = "$SKIP"
+            Call Run_program_from_a_menu(Target, xlHomeSheet)
+        
+        
+        
+        'XXXX La suite est simplement une combinaison des case plus haut. XXXX
+        
+        
+            
+        Case 445
+            'Create from template and run
+
+            Target.Value = Range("A" & 4)
+        
+            Call msgbox_fonction_menu(Target, xlHomeSheet)
+        
+        Case 545
+            'Read New (read in file) and run program
+            Target.Value = Range("A" & 5)
+ 
+            Call msgbox_fonction_menu(Target, xlHomeSheet)
+               
+        
+        Case 645
+            'Update new (write in file) and run program
+            Target.Value = Range("A" & 6)
+ 
+            Call msgbox_fonction_menu(Target, xlHomeSheet)
+            
+            
+        Case 44523 '4 - 45 - 23
+            'Create from template, run macro and open new file
+
+            Target.Value = Range("A" & 4)
+        
+            Call msgbox_fonction_menu(Target, xlHomeSheet)
+            
+            bOpenAndPrompt = True
+            Call Open_files_and_prompt(Target, xlHomeSheet, bOpenAndPrompt)
+            
+        End Select
+        
+        
+    End If
+    
+End If
+
+'Note 1 : la valeur 13 est un remplacement pour "$SKIP". Je voulais écrire $SKIP
+'mais lorsque je roulais la macro, il y avait une interraction non désirée avec
+'la macro à Jordan dans le module DmgSummary avec la fonction DMG_TreatData.
+'L'écriture du string "13" fait appel à la fonction dans cette page "Worksheet_Change"
+'et le 13 est changé pour la valeur de la 13e ligne dans la première colonne, soit
+'$SKIP.
+End Sub
+
+
+
+
+
+Function Open_files_and_prompt(ByVal Target As Range, xlHomeSheet As Worksheet, bOpenAndPrompt As Boolean)
+'Fonction 123 Open_files_in_background
+
+            
+            WorkingFolder = ThisWorkbook.Path & "\"
+            
+            
+            If Len(Dir(WorkingFolder & Cells(Target.Row, 2))) = 0 Then
+                'If file doesnt exist
+                xlHomeSheet.Cells(Target.Row, Target.Column).Select
+                MsgBox "File does not exist."
+                Target.Value = "$SKIP"
+                
+                
+            Else
+            
+
+                    
+                Select Case bOpenAndPrompt
+                    Case True
+                        '23
+                        rInitialTargetRange = xlHomeSheet.Cells(Target.Row, Target.Column).Address
+                        xlHomeSheet.Range(rInitialTargetRange).Select
+                        Target.Value = "$SKIP"
+                        Workbooks.Open (WorkingFolder & Cells(Target.Row, 2))
+
+                    
+                    Case False
+                        '123
+                        Target.Value = "$SKIP"
+                        Application.ScreenUpdating = False
+                        Workbooks.Open (WorkingFolder & Cells(Target.Row, 2))
+                        ThisWorkbook.Activate
+                        Application.ScreenUpdating = True
+                
+                End Select
+            
+                                  
+            End If
+           
+            
+            
+End Function
+            
+     
+
+Function Run_program_from_a_menu(ByVal Target As Range, xlHomeSheet As Worksheet)
+'45
+            'On garde en mémoire l'emplacement de la cellule initiale
+            rInitialTargetRange = xlHomeSheet.Cells(Target.Row, Target.Column).Address
+            
+            Application.StatusBar = "Please wait ... calculations in progress"
+            Call FileCreator.FileCreator   'Call FileCreator sub
+            Application.StatusBar = ""
+            Target.Value = "$SKIP"
+         
+            'On revient à la case de départ
+            xlHomeSheet.Range(rInitialTargetRange).Select
+
+End Function
+
+
+
+Function msgbox_fonction_menu(ByVal Target As Range, xlHomeSheet As Worksheet)
+         Dim vYesNoMsgBox As Variant
+    
+            vYesNoMsgBox = MsgBox(Target.Value, vbOKCancel, "Voulez-vous faire cette action?")
+                If vYesNoMsgBox = vbOK Then
+                    'MsgBox "Run Macro"
+                    Call Run_program_from_a_menu(Target, xlHomeSheet)
+                Else
+                    MsgBox "STOPPED"
+                End If
+End Function
+
